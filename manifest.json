@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-agenttools",
+  "name": "Agent Tools",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Review, approve, and refine AI-generated specs and documents.",
+  "author": "Jim Myers",
+  "authorUrl": "https://github.com/jfmyers9",
+  "isDesktopOnly": false
+}

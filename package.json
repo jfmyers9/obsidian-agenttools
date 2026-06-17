@@ -1,0 +1,29 @@
+{
+  "name": "obsidian-agenttools",
+  "version": "0.1.0",
+  "description": "Review AI-generated specs and documents inside Obsidian.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "test": "vitest run",
+    "lint": "tsc -noEmit -skipLibCheck"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "review",
+    "ai"
+  ],
+  "author": "Jim Myers",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.21.5",
+    "obsidian": "^1.8.7",
+    "tslib": "^2.6.3",
+    "typescript": "^5.5.3",
+    "vitest": "^1.6.0"
+  }
+}
