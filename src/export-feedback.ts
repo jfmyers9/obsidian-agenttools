@@ -21,7 +21,13 @@ export function formatRecordFeedback(record: ReviewRecord): string {
   }
 
   annotations.forEach((annotation, index) => {
-    lines.push("", `### ${index + 1}. ${formatAnnotationTitle(annotation)}`, "", "Quote:", "", quoteBlock(annotation.quote));
+    lines.push("", `### ${index + 1}. ${formatAnnotationTitle(annotation)}`);
+
+    if (typeof annotation.line === "number") {
+      lines.push("", `Line: ${annotation.line}`);
+    }
+
+    lines.push("", "Quote:", "", quoteBlock(annotation.quote));
 
     if (annotation.body) {
       lines.push("", "Comment:", "", annotation.body);

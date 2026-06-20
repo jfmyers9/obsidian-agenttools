@@ -8,9 +8,11 @@ export class PromptModal extends Modal {
     app: App,
     private readonly title: string,
     private readonly placeholder: string,
-    private readonly resolve: (value: string | null) => void
+    private readonly resolve: (value: string | null) => void,
+    private readonly initialValue = ""
   ) {
     super(app);
+    this.value = initialValue;
   }
 
   onOpen(): void {
@@ -19,9 +21,12 @@ export class PromptModal extends Modal {
     contentEl.createEl("h2", { text: this.title });
 
     new Setting(contentEl).addTextArea((text) => {
-      text.setPlaceholder(this.placeholder).onChange((value) => {
-        this.value = value;
-      });
+      text
+        .setPlaceholder(this.placeholder)
+        .setValue(this.initialValue)
+        .onChange((value) => {
+          this.value = value;
+        });
       text.inputEl.rows = 5;
       text.inputEl.focus();
     });
@@ -54,8 +59,8 @@ export class PromptModal extends Modal {
   }
 }
 
-export function promptForText(app: App, title: string, placeholder: string): Promise<string | null> {
+export function promptForText(app: App, title: string, placeholder: string, initialValue = ""): Promise<string | null> {
   return new Promise((resolve) => {
-    new PromptModal(app, title, placeholder, resolve).open();
+    new PromptModal(app, title, placeholder, resolve, initialValue).open();
   });
 }

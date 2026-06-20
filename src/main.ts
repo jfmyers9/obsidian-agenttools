@@ -1,9 +1,12 @@
 import { Notice, Plugin, TFile } from "obsidian";
+import type { Editor } from "obsidian";
+import { createAnchor } from "./anchors";
 import { ReviewStore } from "./review-store";
 import { AgentToolsSettingTab, DEFAULT_SETTINGS } from "./settings";
 import type { AgentToolsSettings } from "./types";
 import { REVIEW_VIEW_TYPE, ReviewView } from "./views/review-view";
 import { formatReviewFeedback } from "./export-feedback";
+import { promptForText } from "./ui/prompt-modal";
 
 export default class AgentToolsPlugin extends Plugin {
   settings: AgentToolsSettings = { ...DEFAULT_SETTINGS };
@@ -42,6 +45,18 @@ export default class AgentToolsPlugin extends Plugin {
           void this.openReviewDashboard(file.path);
         }
         return true;
+      }
+    });
+
+    this.addCommand({
+      id: "add-ai-review-comment",
+      name: "Add AI review comment",
+      hotkeys: [{ modifiers: ["Mod", "Shift"], key: "r" }],
+      editorCallback: (editor, ctx) => {
+        const file = ctx.file;
+        if (file instanceof TFile) {
+          void this.addEditorComment(editor, file);
+        }
       }
     });
 
@@ -136,6 +151,30 @@ export default class AgentToolsPlugin extends Plugin {
     await this.openReviewDashboard(file.path);
   }
 
+  async addEditorComment(editor: Editor, file: TFile): Promise<void> {
+    const body = await this.promptForComment();
+    if (body === null || body.length === 0) {
+      return;
+    }
+
+    const content = editor.getValue();
+    const selection = editor.getSelection();
+    const anchor =
+      selection.length > 0
+        ? createAnchor(content, editor.posToOffset(editor.getCursor("from")), editor.posToOffset(editor.getCursor("to")))
+        : createAnchorForLine(content, editor.getCursor().line);
+
+    await this.reviewStore.addAnnotation(file, {
+      ...anchor,
+      kind: "comment",
+      body
+    });
+
+    await this.openReviewDashboard(file.path);
+    await this.refreshReviewViews();
+    new Notice("Review comment added.");
+  }
+
   async refreshReviewViews(): Promise<void> {
     for (const leaf of this.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)) {
       const view = leaf.view;
@@ -185,4 +224,20 @@ export default class AgentToolsPlugin extends Plugin {
 
     return true;
   }
+
+  private async promptForComment(): Promise<string | null> {
+    return promptForText(this.app, "Review comment", "Comment");
+  }
+}
+
+function createAnchorForLine(content: string, line: number) {
+  const lines = content.split("\n");
+  const quote = lines[line] ?? "";
+  const from = lines.slice(0, line).join("\n").length + (line > 0 ? 1 : 0);
+  const to = from + quote.length;
+  return {
+    ...createAnchor(content, from, to),
+    quote,
+    line: line + 1
+  };
 }

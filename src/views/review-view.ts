@@ -1,9 +1,8 @@
-import { ItemView, MarkdownRenderer, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownView, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 import { applySuggestion } from "../apply-suggestion";
-import { createAnchor } from "../anchors";
 import { formatReviewFeedback } from "../export-feedback";
 import type AgentToolsPlugin from "../main";
-import type { ReviewAnnotationKind, ReviewRecord } from "../types";
+import type { ReviewAnnotation, ReviewRecord } from "../types";
 import { promptForText } from "../ui/prompt-modal";
 
 export const REVIEW_VIEW_TYPE = "agenttools-review";
@@ -12,7 +11,6 @@ export class ReviewView extends ItemView {
   private activeFile: TFile | null = null;
   private activeRecord: ReviewRecord | null = null;
   private sourceContent = "";
-  private selectedRange: { text: string; from: number; to: number } | null = null;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -56,7 +54,6 @@ export class ReviewView extends ItemView {
   private renderContextState(): void {
     this.activeFile = null;
     this.activeRecord = null;
-    this.selectedRange = null;
 
     const container = this.contentEl;
     container.empty();
@@ -88,31 +85,13 @@ export class ReviewView extends ItemView {
     this.createActionButton(decisions, "Request changes", () => void this.setDecision("changes_requested"));
     this.createActionButton(decisions, "Export", () => void this.exportActiveFeedback());
 
-    const tools = container.createDiv({ cls: "agenttools-toolbar" });
-    this.createActionButton(tools, "Comment", () => void this.addAnnotation("comment"));
-    this.createActionButton(tools, "Replace", () => void this.addAnnotation("replacement"));
-    this.createActionButton(tools, "Delete", () => void this.addAnnotation("deletion"));
+    const hint = container.createDiv({ cls: "agenttools-state" });
+    hint.createSpan({ text: "Use " });
+    hint.createEl("kbd", { text: "Mod+Shift+R" });
+    hint.createSpan({ text: " in the editor to add a comment to the selection or current line." });
 
-    const state = container.createDiv({ cls: "agenttools-state", text: "Loading..." });
-    const body = container.createDiv({ cls: "agenttools-review-layout" });
-    const article = body.createDiv({ cls: "agenttools-document" });
-    const side = body.createDiv({ cls: "agenttools-side-panel" });
-
-    article.addEventListener("mouseup", () => {
-      this.captureSelection(article);
-    });
-    article.addEventListener("keyup", () => {
-      this.captureSelection(article);
-    });
-
-    try {
-      await MarkdownRenderer.renderMarkdown(this.sourceContent, article, this.activeFile.path, this);
-      this.renderAnnotations(side, this.activeRecord);
-      state.remove();
-    } catch (error) {
-      body.remove();
-      state.setText(error instanceof Error ? error.message : "Unable to render review.");
-    }
+    const comments = container.createDiv({ cls: "agenttools-comments-panel" });
+    this.renderAnnotations(comments, this.activeRecord);
   }
 
   private renderAnnotations(container: HTMLElement, record: ReviewRecord): void {
@@ -122,13 +101,16 @@ export class ReviewView extends ItemView {
     header.createDiv({ text: `${record.annotations.length} annotations` });
 
     if (record.annotations.length === 0) {
-      container.createDiv({ cls: "agenttools-empty", text: "No annotations." });
+      container.createDiv({ cls: "agenttools-empty", text: "No comments yet." });
       return;
     }
 
     for (const annotation of record.annotations) {
       const item = container.createDiv({ cls: "agenttools-annotation" });
-      item.createDiv({ cls: "agenttools-annotation-kind", text: annotation.kind });
+      const heading = item.createDiv({ cls: "agenttools-annotation-heading" });
+      heading.createDiv({ cls: "agenttools-annotation-kind", text: annotation.line ? `line ${annotation.line}` : annotation.kind });
+      heading.createDiv({ cls: `agenttools-pill agenttools-pill-${annotation.status}`, text: annotation.status });
+
       item.createEl("blockquote", { text: annotation.quote });
       if (annotation.body) {
         item.createDiv({ cls: "agenttools-annotation-body", text: annotation.body });
@@ -136,56 +118,14 @@ export class ReviewView extends ItemView {
       if (annotation.replacement) {
         item.createEl("pre", { text: annotation.replacement });
       }
+      const actions = item.createDiv({ cls: "agenttools-actions" });
+      this.createActionButton(actions, "Jump", () => void this.jumpToAnnotation(annotation));
+      this.createActionButton(actions, "Edit", () => void this.editAnnotation(annotation));
+      this.createActionButton(actions, "Remove", () => void this.removeAnnotation(annotation));
       if ((annotation.kind === "replacement" || annotation.kind === "deletion") && annotation.status === "open") {
-        this.createActionButton(item, "Apply", () => void this.applyAnnotation(annotation.id));
+        this.createActionButton(actions, "Apply", () => void this.applyAnnotation(annotation.id));
       }
-      item.createDiv({ cls: `agenttools-pill agenttools-pill-${annotation.status}`, text: annotation.status });
     }
-  }
-
-  private captureSelection(container: HTMLElement): void {
-    const selection = window.getSelection();
-    const text = selection?.toString().trim();
-
-    if (!selection || !text || selection.rangeCount === 0) {
-      this.selectedRange = null;
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    if (!container.contains(range.commonAncestorContainer)) {
-      this.selectedRange = null;
-      return;
-    }
-
-    const from = this.sourceContent.indexOf(text);
-    this.selectedRange = from === -1 ? null : { text, from, to: from + text.length };
-  }
-
-  private async addAnnotation(kind: ReviewAnnotationKind): Promise<void> {
-    if (!this.activeFile || !this.selectedRange) {
-      new Notice("Select document text first.");
-      return;
-    }
-
-    const body = kind === "deletion" ? "" : await promptForText(this.app, labelForAnnotation(kind), "Review note");
-    if (body === null) {
-      return;
-    }
-
-    const replacement =
-      kind === "replacement" ? await promptForText(this.app, "Replacement text", this.selectedRange.text) : undefined;
-    if (kind === "replacement" && replacement === null) {
-      return;
-    }
-
-    this.activeRecord = await this.plugin.reviewStore.addAnnotation(this.activeFile, {
-      ...createAnchor(this.sourceContent, this.selectedRange.from, this.selectedRange.to),
-      kind,
-      body: body || undefined,
-      replacement: replacement || undefined
-    });
-    await this.renderDetail();
   }
 
   private async setDecision(decision: ReviewRecord["decision"]): Promise<void> {
@@ -205,6 +145,46 @@ export class ReviewView extends ItemView {
 
     await navigator.clipboard.writeText(formatReviewFeedback([this.activeRecord]));
     new Notice("Review feedback copied.");
+  }
+
+  private async editAnnotation(annotation: ReviewAnnotation): Promise<void> {
+    if (!this.activeFile) {
+      return;
+    }
+
+    const body = await promptForText(this.app, "Edit review comment", "Comment", annotation.body ?? "");
+    if (body === null) {
+      return;
+    }
+
+    this.activeRecord = await this.plugin.reviewStore.updateAnnotationBody(this.activeFile, annotation.id, body);
+    await this.renderDetail();
+  }
+
+  private async removeAnnotation(annotation: ReviewAnnotation): Promise<void> {
+    if (!this.activeFile) {
+      return;
+    }
+
+    this.activeRecord = await this.plugin.reviewStore.removeAnnotation(this.activeFile, annotation.id);
+    await this.renderDetail();
+  }
+
+  private async jumpToAnnotation(annotation: ReviewAnnotation): Promise<void> {
+    if (!this.activeFile) {
+      return;
+    }
+
+    const leaf = this.app.workspace.getLeaf(false);
+    await leaf.openFile(this.activeFile);
+    if (!(leaf.view instanceof MarkdownView) || typeof annotation.line !== "number") {
+      return;
+    }
+
+    const editor = leaf.view.editor;
+    const line = Math.max(0, annotation.line - 1);
+    editor.setCursor({ line, ch: 0 });
+    editor.scrollIntoView({ from: { line, ch: 0 }, to: { line, ch: annotation.quote.length } }, true);
   }
 
   async applyFirstOpenSuggestion(): Promise<void> {
@@ -263,14 +243,4 @@ export class ReviewView extends ItemView {
 
 function formatDecision(decision: ReviewRecord["decision"]): string {
   return decision.replace(/_/g, " ");
-}
-
-function labelForAnnotation(kind: ReviewAnnotationKind): string {
-  if (kind === "replacement") {
-    return "Replacement note";
-  }
-  if (kind === "check") {
-    return "Approval note";
-  }
-  return "Comment";
 }

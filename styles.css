@@ -3,10 +3,9 @@
 }
 
 .agenttools-view-header,
-.agenttools-toolbar,
 .agenttools-actions,
 .agenttools-side-header,
-.agenttools-summary-meta {
+.agenttools-annotation-heading {
   align-items: center;
   display: flex;
   gap: 8px;
@@ -30,52 +29,13 @@
   min-width: 0;
 }
 
-.agenttools-dashboard-list {
-  display: grid;
-  gap: 8px;
-}
-
-.agenttools-summary-row {
-  background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  color: var(--text-normal);
-  cursor: pointer;
-  display: grid;
-  gap: 4px;
-  padding: 10px;
-  text-align: left;
-  width: 100%;
-}
-
-.agenttools-summary-row:hover,
-.agenttools-summary-row:focus-visible {
-  border-color: var(--interactive-accent);
-}
-
-.agenttools-summary-title {
-  font-weight: var(--font-semibold);
-}
-
 .agenttools-summary-path {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   overflow-wrap: anywhere;
 }
 
-.agenttools-review-layout {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 30%);
-}
-
-.agenttools-document {
-  border-right: 1px solid var(--background-modifier-border);
-  min-width: 0;
-  padding-right: 12px;
-}
-
-.agenttools-side-panel {
+.agenttools-comments-panel {
   display: grid;
   gap: 8px;
 }
@@ -104,6 +64,10 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   text-transform: uppercase;
+}
+
+.agenttools-annotation-heading {
+  justify-content: space-between;
 }
 
 .agenttools-pill {
@@ -140,18 +104,16 @@
   padding: 8px 0;
 }
 
-.agenttools-icon-button,
-.agenttools-action-button {
-  flex: 0 0 auto;
+.agenttools-state kbd {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  padding: 1px 5px;
 }
 
-@media (max-width: 700px) {
-  .agenttools-review-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .agenttools-document {
-    border-right: 0;
-    padding-right: 0;
-  }
+.agenttools-action-button {
+  flex: 0 0 auto;
 }

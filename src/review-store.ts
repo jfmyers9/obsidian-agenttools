@@ -97,6 +97,33 @@ export class ReviewStore {
     return record;
   }
 
+  async updateAnnotationBody(source: TFile, annotationId: string, body: string): Promise<ReviewRecord> {
+    const record = await this.loadRecord(source);
+    const annotation = record.annotations.find((item) => item.id === annotationId);
+
+    if (annotation) {
+      annotation.body = body;
+      annotation.updatedAt = new Date().toISOString();
+      record.updatedAt = annotation.updatedAt;
+      await this.saveRecord(record);
+    }
+
+    return record;
+  }
+
+  async removeAnnotation(source: TFile, annotationId: string): Promise<ReviewRecord> {
+    const record = await this.loadRecord(source);
+    const nextAnnotations = record.annotations.filter((item) => item.id !== annotationId);
+
+    if (nextAnnotations.length !== record.annotations.length) {
+      record.annotations = nextAnnotations;
+      record.updatedAt = new Date().toISOString();
+      await this.saveRecord(record);
+    }
+
+    return record;
+  }
+
   getSidecarPath(sourcePath: string): string {
     return sidecarPathFor(sourcePath, this.getSettings().sidecarRoot);
   }

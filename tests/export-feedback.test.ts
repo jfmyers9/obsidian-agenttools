@@ -17,6 +17,7 @@ describe("formatReviewFeedback", () => {
             kind: "replacement",
             status: "open",
             quote: "old",
+            line: 12,
             replacement: "new",
             createdAt: "now",
             updatedAt: "now"
@@ -27,6 +28,7 @@ describe("formatReviewFeedback", () => {
 
     expect(feedback).toContain("## docs/spec.md");
     expect(feedback).toContain("Decision: changes_requested");
+    expect(feedback).toContain("Line: 12");
     expect(feedback).toContain("Suggested replacement:");
   });
 });
