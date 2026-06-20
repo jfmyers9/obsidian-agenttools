@@ -9,17 +9,6 @@ export const DEFAULT_SETTINGS: AgentToolsSettings = {
   showRibbonIcon: true
 };
 
-function parseRoots(value: string): string[] {
-  return value
-    .split(/[\n,]/)
-    .map((root) => root.trim().replace(/^\/+|\/+$/g, ""))
-    .filter((root) => root.length > 0);
-}
-
-function formatRoots(roots: string[]): string {
-  return roots.join("\n");
-}
-
 export class AgentToolsSettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: AgentToolsPlugin) {
     super(app, plugin);
@@ -29,20 +18,6 @@ export class AgentToolsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("agenttools-settings");
-
-    new Setting(containerEl)
-      .setName("Review folders")
-      .setDesc("Optional vault-relative dashboard filters. Leave blank to show all Markdown files.")
-      .addTextArea((text) => {
-        text
-          .setPlaceholder("blueprints\nspecs\ndocs")
-          .setValue(formatRoots(this.plugin.settings.reviewRoots))
-          .onChange(async (value) => {
-            this.plugin.settings.reviewRoots = parseRoots(value);
-            await this.plugin.saveSettings();
-          });
-        text.inputEl.rows = 4;
-      });
 
     new Setting(containerEl)
       .setName("Review sidecar folder")

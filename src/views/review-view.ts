@@ -3,7 +3,7 @@ import { applySuggestion } from "../apply-suggestion";
 import { createAnchor } from "../anchors";
 import { formatReviewFeedback } from "../export-feedback";
 import type AgentToolsPlugin from "../main";
-import type { ReviewAnnotationKind, ReviewRecord, ReviewSummary } from "../types";
+import type { ReviewAnnotationKind, ReviewRecord } from "../types";
 import { promptForText } from "../ui/prompt-modal";
 
 export const REVIEW_VIEW_TYPE = "agenttools-review";
@@ -34,7 +34,7 @@ export class ReviewView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    await this.renderDashboard();
+    await this.renderContextState();
   }
 
   async openFile(file: TFile): Promise<void> {
@@ -50,10 +50,10 @@ export class ReviewView extends ItemView {
       return;
     }
 
-    await this.renderDashboard();
+    await this.renderContextState();
   }
 
-  private async renderDashboard(): Promise<void> {
+  private renderContextState(): void {
     this.activeFile = null;
     this.activeRecord = null;
     this.selectedRange = null;
@@ -64,52 +64,13 @@ export class ReviewView extends ItemView {
 
     const header = container.createDiv({ cls: "agenttools-view-header" });
     header.createEl("h2", { text: "AI review" });
-    const actions = header.createDiv({ cls: "agenttools-actions" });
-    this.createActionButton(actions, "Review active file", () => void this.plugin.reviewActiveDocument());
-    this.createIconButton(actions, "refresh-cw", "Refresh", () => void this.renderDashboard());
-
-    const state = container.createDiv({ cls: "agenttools-state", text: "Loading..." });
-    let summaries: ReviewSummary[];
-    try {
-      summaries = await this.plugin.reviewIndex.listSummaries();
-    } catch (error) {
-      state.setText(error instanceof Error ? error.message : "Unable to load reviews.");
-      return;
-    }
-    state.remove();
-
-    if (summaries.length === 0) {
-      container.createDiv({ cls: "agenttools-empty", text: "No Markdown files found. Open any file and choose Review active file." });
-      return;
-    }
-
-    const list = container.createDiv({ cls: "agenttools-dashboard-list" });
-    for (const summary of summaries) {
-      this.renderSummaryRow(list, summary);
-    }
-  }
-
-  private renderSummaryRow(container: HTMLElement, summary: ReviewSummary): void {
-    const button = container.createEl("button", { cls: "agenttools-summary-row" });
-    button.type = "button";
-    button.createDiv({ cls: "agenttools-summary-title", text: summary.title });
-    button.createDiv({ cls: "agenttools-summary-path", text: summary.sourcePath });
-
-    const meta = button.createDiv({ cls: "agenttools-summary-meta" });
-    meta.createSpan({ cls: `agenttools-pill agenttools-pill-${summary.decision}`, text: formatDecision(summary.decision) });
-    meta.createSpan({ text: `${summary.openAnnotationCount}/${summary.annotationCount} open` });
-
-    button.addEventListener("click", () => {
-      const file = this.app.vault.getAbstractFileByPath(summary.sourcePath);
-      if (file instanceof TFile) {
-        void this.openFile(file);
-      }
-    });
+    this.createActionButton(header.createDiv({ cls: "agenttools-actions" }), "Review active file", () => void this.plugin.reviewActiveDocument());
+    container.createDiv({ cls: "agenttools-empty", text: "No active Markdown file." });
   }
 
   private async renderDetail(): Promise<void> {
     if (!this.activeFile || !this.activeRecord) {
-      await this.renderDashboard();
+      this.renderContextState();
       return;
     }
 
@@ -118,7 +79,6 @@ export class ReviewView extends ItemView {
     container.addClass("agenttools-root");
 
     const header = container.createDiv({ cls: "agenttools-view-header" });
-    this.createIconButton(header, "arrow-left", "Back", () => void this.renderDashboard());
     const title = header.createDiv({ cls: "agenttools-title-block" });
     title.createEl("h2", { text: this.activeFile.basename });
     title.createDiv({ cls: "agenttools-summary-path", text: this.activeFile.path });

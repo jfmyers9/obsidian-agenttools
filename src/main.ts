@@ -1,5 +1,4 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { ReviewIndexService } from "./review-index";
 import { ReviewStore } from "./review-store";
 import { AgentToolsSettingTab, DEFAULT_SETTINGS } from "./settings";
 import type { AgentToolsSettings } from "./types";
@@ -9,12 +8,10 @@ import { formatReviewFeedback } from "./export-feedback";
 export default class AgentToolsPlugin extends Plugin {
   settings: AgentToolsSettings = { ...DEFAULT_SETTINGS };
   reviewStore!: ReviewStore;
-  reviewIndex!: ReviewIndexService;
 
   async onload(): Promise<void> {
     await this.loadSettings();
     this.reviewStore = new ReviewStore(this.app.vault, () => this.settings);
-    this.reviewIndex = new ReviewIndexService(this.app.vault, this.reviewStore, () => this.settings);
 
     this.registerView(REVIEW_VIEW_TYPE, (leaf) => new ReviewView(leaf, this));
     this.addSettingTab(new AgentToolsSettingTab(this.app, this));
@@ -27,9 +24,9 @@ export default class AgentToolsPlugin extends Plugin {
 
     this.addCommand({
       id: "open-ai-review-dashboard",
-      name: "Open AI review dashboard",
+      name: "Open AI review pane",
       callback: () => {
-        void this.openReviewDashboard();
+        void this.reviewActiveDocument();
       }
     });
 

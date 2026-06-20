@@ -6,7 +6,6 @@ Agent Tools is an Obsidian plugin for reviewing AI-generated specs and documents
 
 - Open any Markdown document and run **Review current document** from the command palette.
 - Use the ribbon icon or **AI review** tab's **Review active file** button for the current document.
-- Optionally filter the dashboard to specific folders from plugin settings.
 - Add comments, replacement suggestions, and deletion suggestions from selected document text.
 - Approve a document or request changes.
 - Export review feedback as Markdown for an AI agent.
