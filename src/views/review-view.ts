@@ -64,7 +64,9 @@ export class ReviewView extends ItemView {
 
     const header = container.createDiv({ cls: "agenttools-view-header" });
     header.createEl("h2", { text: "AI review" });
-    this.createIconButton(header, "refresh-cw", "Refresh", () => void this.renderDashboard());
+    const actions = header.createDiv({ cls: "agenttools-actions" });
+    this.createActionButton(actions, "Review active file", () => void this.plugin.reviewActiveDocument());
+    this.createIconButton(actions, "refresh-cw", "Refresh", () => void this.renderDashboard());
 
     const state = container.createDiv({ cls: "agenttools-state", text: "Loading..." });
     let summaries: ReviewSummary[];
@@ -77,7 +79,7 @@ export class ReviewView extends ItemView {
     state.remove();
 
     if (summaries.length === 0) {
-      container.createDiv({ cls: "agenttools-empty", text: "No review files found." });
+      container.createDiv({ cls: "agenttools-empty", text: "No Markdown files found. Open any file and choose Review active file." });
       return;
     }
 

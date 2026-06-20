@@ -20,8 +20,8 @@ export default class AgentToolsPlugin extends Plugin {
     this.addSettingTab(new AgentToolsSettingTab(this.app, this));
 
     if (this.settings.showRibbonIcon) {
-      this.addRibbonIcon("list-checks", "Open AI review dashboard", () => {
-        void this.openReviewDashboard();
+      this.addRibbonIcon("list-checks", "Review active document", () => {
+        void this.reviewActiveDocument();
       });
     }
 
@@ -125,6 +125,18 @@ export default class AgentToolsPlugin extends Plugin {
         new Notice("Current file is not reviewable.");
       }
     }
+  }
+
+  async reviewActiveDocument(): Promise<void> {
+    const file = this.app.workspace.getActiveFile();
+
+    if (!file) {
+      new Notice("Open a file to review first.");
+      await this.openReviewDashboard();
+      return;
+    }
+
+    await this.openReviewDashboard(file.path);
   }
 
   async refreshReviewViews(): Promise<void> {

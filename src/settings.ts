@@ -3,7 +3,7 @@ import type AgentToolsPlugin from "./main";
 import type { AgentToolsSettings } from "./types";
 
 export const DEFAULT_SETTINGS: AgentToolsSettings = {
-  reviewRoots: ["blueprints", "specs", "docs"],
+  reviewRoots: [],
   sidecarRoot: ".agenttools/reviews",
   defaultExportMode: "agent_feedback",
   showRibbonIcon: true
@@ -32,7 +32,7 @@ export class AgentToolsSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Review folders")
-      .setDesc("Vault-relative folders scanned for Markdown files.")
+      .setDesc("Optional vault-relative dashboard filters. Leave blank to show all Markdown files.")
       .addTextArea((text) => {
         text
           .setPlaceholder("blueprints\nspecs\ndocs")
