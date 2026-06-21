@@ -35,10 +35,10 @@ export class ReviewView extends ItemView {
     await this.renderContextState();
   }
 
-  async openFile(file: TFile): Promise<void> {
+  async openFile(file: TFile, record?: ReviewRecord): Promise<void> {
     this.activeFile = file;
     this.sourceContent = await this.app.vault.read(file);
-    this.activeRecord = await this.plugin.reviewStore.loadRecord(file);
+    this.activeRecord = record ?? (await this.plugin.reviewStore.loadRecord(file));
     await this.renderDetail();
   }
 

@@ -3,7 +3,7 @@ import type { Editor } from "obsidian";
 import { createAnchor } from "./anchors";
 import { ReviewStore } from "./review-store";
 import { AgentToolsSettingTab, DEFAULT_SETTINGS } from "./settings";
-import type { AgentToolsSettings } from "./types";
+import type { AgentToolsSettings, ReviewRecord } from "./types";
 import { REVIEW_VIEW_TYPE, ReviewView } from "./views/review-view";
 import { formatReviewFeedback } from "./export-feedback";
 import { promptForText } from "./ui/prompt-modal";
@@ -148,31 +148,35 @@ export default class AgentToolsPlugin extends Plugin {
       return;
     }
 
-    await this.openReviewDashboard(file.path);
+    await this.openReviewFile(file);
   }
 
   async addEditorComment(editor: Editor, file: TFile): Promise<void> {
-    const body = await this.promptForComment();
-    if (body === null || body.length === 0) {
-      return;
+    try {
+      const body = await this.promptForComment();
+      if (body === null || body.length === 0) {
+        return;
+      }
+
+      const content = editor.getValue();
+      const selection = editor.getSelection();
+      const anchor =
+        selection.length > 0
+          ? createAnchor(content, editor.posToOffset(editor.getCursor("from")), editor.posToOffset(editor.getCursor("to")))
+          : createAnchorForLine(content, editor.getCursor().line);
+
+      const record = await this.reviewStore.addAnnotation(file, {
+        ...anchor,
+        kind: "comment",
+        body
+      });
+
+      await this.openReviewFile(file, record);
+      new Notice("Review comment added.");
+    } catch (error) {
+      console.error("Failed to save review comment", error);
+      new Notice(error instanceof Error ? `Failed to save review comment: ${error.message}` : "Failed to save review comment.");
     }
-
-    const content = editor.getValue();
-    const selection = editor.getSelection();
-    const anchor =
-      selection.length > 0
-        ? createAnchor(content, editor.posToOffset(editor.getCursor("from")), editor.posToOffset(editor.getCursor("to")))
-        : createAnchorForLine(content, editor.getCursor().line);
-
-    await this.reviewStore.addAnnotation(file, {
-      ...anchor,
-      kind: "comment",
-      body
-    });
-
-    await this.openReviewDashboard(file.path);
-    await this.refreshReviewViews();
-    new Notice("Review comment added.");
   }
 
   async refreshReviewViews(): Promise<void> {
@@ -195,6 +199,15 @@ export default class AgentToolsPlugin extends Plugin {
     await leaf.setViewState({ type: REVIEW_VIEW_TYPE, active: true });
     await this.app.workspace.revealLeaf(leaf);
     return leaf;
+  }
+
+  private async openReviewFile(file: TFile, record?: ReviewRecord): Promise<void> {
+    const leaf = await this.getOrCreateReviewLeaf();
+    const view = leaf.view;
+
+    if (view instanceof ReviewView) {
+      await view.openFile(file, record);
+    }
   }
 
   private getActiveReviewView(): ReviewView | null {

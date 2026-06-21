@@ -53,7 +53,20 @@ export class ReviewStore {
       return;
     }
 
-    await this.vault.create(sidecarPath, content);
+    try {
+      await this.vault.create(sidecarPath, content);
+    } catch (error) {
+      if (!isAlreadyExistsError(error)) {
+        throw error;
+      }
+
+      const existingAfterCreate = this.vault.getAbstractFileByPath(sidecarPath);
+      if (!isTFile(existingAfterCreate)) {
+        throw error;
+      }
+
+      await this.vault.modify(existingAfterCreate, content);
+    }
   }
 
   async setDecision(source: TFile, decision: ReviewDecision): Promise<ReviewRecord> {
@@ -135,7 +148,13 @@ export class ReviewStore {
     for (const part of parts) {
       current = current ? `${current}/${part}` : part;
       if (!this.vault.getAbstractFileByPath(current)) {
-        await this.vault.createFolder(current);
+        try {
+          await this.vault.createFolder(current);
+        } catch (error) {
+          if (!isAlreadyExistsError(error)) {
+            throw error;
+          }
+        }
       }
     }
   }
@@ -176,4 +195,8 @@ function normalizePath(path: string): string {
 
 function isTFile(file: unknown): file is TFile {
   return typeof file === "object" && file !== null && "path" in file && "extension" in file;
+}
+
+export function isAlreadyExistsError(error: unknown): boolean {
+  return error instanceof Error && error.message.toLowerCase().includes("already exists");
 }
